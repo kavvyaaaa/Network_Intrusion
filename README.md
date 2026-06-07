@@ -8,8 +8,6 @@ This system addresses a core challenge in cybersecurity: detecting malicious net
 
 The pipeline loads and samples data, preprocesses features, trains multiple classifiers, evaluates performance, and supports live inference through a web-based command center.
 
-**Research question:** Can anomaly detection improve identification of unseen attacks?
-
 The project compares Random Forest, XGBoost, and Isolation Forest, with a hybrid RF + Isolation Forest approach as the proposed ensemble method for higher recall on anomalous traffic.
 
 ## What the System Does
@@ -40,11 +38,10 @@ In brief, the system:
 |----------|-------|
 | **Language** | Python |
 | **Data processing** | Pandas, NumPy |
-| **Machine learning** | Scikit-learn, XGBoost, LightGBM |
+| **Machine learning** | Scikit-learn, XGBoost|
 | **Unsupervised learning** | Isolation Forest, DBSCAN |
 | **Visualization** | Matplotlib, Seaborn |
 | **Deployment** | Streamlit |
-| **Serialization** | Joblib, PyArrow |
 
 ## Folder Structure
 
@@ -133,6 +130,6 @@ Open the URL shown in the terminal (typically `http://localhost:8501`).
 | **CICIDS2017** | Primary | Benign traffic, DDoS, brute force, port scans, botnet, and more (80+ flow features) |
 | **NSL-KDD** | Secondary | Classic intrusion detection benchmark for comparison and cross-validation |
 
-## License
+## Author
 
-Add your license here if applicable.
+Made by KAVYA RAJ
