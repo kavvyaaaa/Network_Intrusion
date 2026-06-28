@@ -118,15 +118,25 @@ st.markdown("""
 # Cache data loading functions
 @st.cache_data
 def get_cicids_data(sample_size):
-    return load_cicids2017(sample_size=sample_size)
+    try:
+        return load_cicids2017(sample_size=sample_size)
+    except FileNotFoundError:
+        import download_data
+        download_data.main()
+        return load_cicids2017(sample_size=sample_size)
 
 @st.cache_data
 def get_nsl_data(sample_size):
     # Load training set by default
-    return load_nsl_kdd(is_train=True, sample_size=sample_size)
+    try:
+        return load_nsl_kdd(is_train=True, sample_size=sample_size)
+    except FileNotFoundError:
+        import download_data
+        download_data.main()
+        return load_nsl_kdd(is_train=True, sample_size=sample_size)
 
 # Setup layout
-st.title("🛡️ Intelligent Network Intrusion Detection System (NIDS)")
+st.title("Intelligent Network Intrusion Detection System (NIDS)")
 st.markdown("---")
 
 # Sidebar - Dataset Configuration
@@ -150,7 +160,7 @@ sample_size = st.sidebar.slider(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **Smart Sampling Enabled:** Capping majority benign traffic to retain rare attack samples (e.g. Heartbleed, SQL Injections) for optimal training.")
+st.sidebar.info(" **Smart Sampling Enabled:** Capping majority benign traffic to retain rare attack samples (e.g. Heartbleed, SQL Injections) for optimal training.")
 
 # Load Data based on choice
 if dataset_choice == "CICIDS2017 (Primary)":
@@ -164,15 +174,15 @@ else:
 
 # Tabs navigation
 tab_eda, tab_train, tab_cross, tab_simulator = st.tabs([
-    "📊 Dataset Overview & EDA", 
-    "⚙️ Model Performance Hub", 
-    "🔄 Cross-Dataset Transfer Validation",
-    "🚀 Threat Attack Simulator"
+    "Dataset Overview & EDA", 
+    "Model Performance Hub", 
+    "Cross-Dataset Transfer Validation",
+    "Threat Attack Simulator"
 ])
 
 # ----------------- TAB 1: EDA & DATASET OVERVIEW -----------------
 with tab_eda:
-    st.header("📊 Dataset Statistics & Exploratory Data Analysis")
+    st.header("Dataset Statistics & Exploratory Data Analysis")
     
     col1, col2, col3 = st.columns(3)
     
@@ -261,7 +271,7 @@ with tab_eda:
 
 # ----------------- TAB 2: MODEL PERFORMANCE HUB -----------------
 with tab_train:
-    st.header("⚙️ Model Training and Performance Comparison")
+    st.header("Model Training and Performance Comparison")
     st.write("Train and compare multiple models on the active dataset.")
     
     # Preprocess the data
@@ -285,7 +295,7 @@ with tab_train:
         # Keep models in session state to avoid retraining on click
         train_key = f"{data_name}_{classification_task.lower()}_{sample_size}"
         
-        if st.button("🚀 Execute Pipeline"):
+        if st.button("Execute Pipeline"):
             with st.spinner("Running model training algorithms..."):
                 results = {}
                 
@@ -355,7 +365,7 @@ with tab_train:
         if f"{train_key}_results" in st.session_state:
             st.success("✅ Models loaded and ready.")
         else:
-            st.warning("⚠️ Press 'Execute Pipeline' to train models and generate metrics.")
+            st.warning(" Press 'Execute Pipeline' to train models and generate metrics.")
             
     with col_t_2:
         st.subheader("Performance Comparison Dashboard")
@@ -423,7 +433,7 @@ with tab_train:
 
 # ----------------- TAB 3: CROSS-DATASET VALIDATION -----------------
 with tab_cross:
-    st.header("🔄 Cross-Dataset Transfer Validation")
+    st.header("Cross-Dataset Transfer Validation")
     st.markdown("""
     Evaluate how well a machine learning model trained on **CICIDS2017** generalizes to the **NSL-KDD** network environment, and vice versa.
     Since the two datasets have different network features, we train a classifier using **only overlapping numeric flow features**:
@@ -459,7 +469,7 @@ with tab_cross:
         target_ds = "NSL-KDD (Secondary)" if source_ds == "CICIDS2017 (Primary)" else "CICIDS2017 (Primary)"
         st.write(f"Target Test Dataset: **{target_ds}**")
         
-        if st.button("🔄 Run Cross-Dataset Test"):
+        if st.button("Run Cross-Dataset Test"):
             with st.spinner("Executing transfer learning pipeline..."):
                 # Load both datasets
                 df_cic = get_cicids_data(sample_size=10000)
@@ -540,13 +550,13 @@ with tab_cross:
             """, unsafe_allow_html=True)
             
             decay = (st.session_state['cross_val_acc_src'] - st.session_state['cross_val_acc_tgt']) * 100
-            st.info(f"📉 **Performance Decay:** The accuracy dropped by **{decay:.1f}%** when tested on the out-of-distribution dataset. This highlights the domain shift in network topologies and flow characteristics, proving why multi-dataset benchmarking is vital in research.")
+            st.info(f" **Performance Decay:** The accuracy dropped by **{decay:.1f}%** when tested on the out-of-distribution dataset. This highlights the domain shift in network topologies and flow characteristics, proving why multi-dataset benchmarking is vital in research.")
         else:
             st.info("Run the Transfer Validation pipeline to see transfer analysis.")
 
 # ----------------- TAB 4: THREAT ATTACK SIMULATOR -----------------
 with tab_simulator:
-    st.header("🚀 Real-Time Network Threat Simulator")
+    st.header("Real-Time Network Threat Simulator")
     st.write("Inject simulated or custom network flow metrics to evaluate model behavior instantly.")
     
     # Check if pre-trained binary models exist
@@ -569,7 +579,7 @@ with tab_simulator:
         has_model = False
         
     if not has_model:
-        st.warning("⚠️ **Models Not Found:** You must train a **Binary** model first in the **Model Performance Hub** tab before using the simulator.")
+        st.warning("**Models Not Found:** You must train a **Binary** model first in the **Model Performance Hub** tab before using the simulator.")
     else:
         st.markdown("### Step 1: Select Traffic Threat Template")
         
@@ -695,7 +705,7 @@ with tab_simulator:
         input_df = pd.DataFrame([medians])
         
         # Run inference
-        if st.button("🚨 Inspect Packet Flow"):
+        if st.button("Inspect Packet Flow"):
             with st.spinner("Analyzing packet characteristics..."):
                 # Preprocess
                 X_sim_proc, _, _ = sim_prep.transform(input_df)
@@ -744,7 +754,7 @@ with tab_simulator:
                 else: # Benign
                     st.markdown(f"""
                     <div class="glow-card" style="border-color: #00ffb2; box-shadow: 0 4px 20px rgba(0,255,178,0.15);">
-                        <h2 style="color: #00ffb2; margin: 0;">🛡️ FLOW SECURE: BENIGN</h2>
+                        <h2 style="color: #00ffb2; margin: 0;">FLOW SECURE: BENIGN</h2>
                         <p style="font-size: 1.1rem; margin-top: 10px;">
                             The traffic packet complies with standard behavioral distributions. No anomalies detected.
                         </p>
