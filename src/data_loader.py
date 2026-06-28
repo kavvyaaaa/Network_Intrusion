@@ -82,25 +82,47 @@ def smart_sample(df, label_col, sample_size, random_state=42):
 
 def load_cicids2017(sample_size=10000, random_state=42):
     """
-    Loads and preprocesses the CICIDS2017 dataset.
+    Loads and preprocesses the CICIDS2017 dataset in a memory-efficient way.
     """
     file_path = os.path.join(DATA_DIR, "CICIDS_Flow.parquet")
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"CICIDS2017 file not found at {file_path}. Run download_data.py first.")
         
-    df = pd.read_parquet(file_path)
+    import pyarrow.dataset as ds
+    dataset = ds.dataset(file_path, format="parquet")
     
-    # Clean up column names (strip whitespaces)
-    df.columns = df.columns.str.strip()
+    pool_dfs = []
     
-    # Drop identifier columns to prevent overfitting on metadata
-    metadata_cols = ['flow_id', 'source_ip', 'destination_ip', 'Timestamp']
-    drop_cols = [col for col in metadata_cols if col in df.columns]
-    if drop_cols:
-        df = df.drop(columns=drop_cols)
+    # Process in chunks to avoid OOM on Streamlit Cloud (1GB limit)
+    for batch in dataset.to_batches():
+        df_batch = batch.to_pandas()
         
-    # Smart sampling first (much faster cleaning)
-    df_sampled = smart_sample(df, 'attack_label', sample_size, random_state)
+        # Clean up column names
+        df_batch.columns = df_batch.columns.str.strip()
+        
+        # Drop identifier columns
+        metadata_cols = ['flow_id', 'source_ip', 'destination_ip', 'Timestamp']
+        drop_cols = [col for col in metadata_cols if col in df_batch.columns]
+        if drop_cols:
+            df_batch = df_batch.drop(columns=drop_cols)
+            
+        # Separate benign and attack traffic
+        is_benign = df_batch['attack_label'].astype(str).str.upper() == 'BENIGN'
+        df_attacks = df_batch[~is_benign]
+        df_benign = df_batch[is_benign]
+        
+        # Subsample benign heavily in this batch to keep memory low
+        n_benign = min(len(df_benign), 1500)
+        df_benign_sampled = df_benign.sample(n=n_benign, random_state=random_state)
+        
+        pool_dfs.append(df_attacks)
+        pool_dfs.append(df_benign_sampled)
+        
+    # Combine the filtered chunks
+    df_pool = pd.concat(pool_dfs, ignore_index=True)
+        
+    # Perform the final smart sampling on the accumulated pool
+    df_sampled = smart_sample(df_pool, 'attack_label', sample_size, random_state)
     
     # Clean only the sampled dataset
     df_sampled = clean_dataframe(df_sampled)
